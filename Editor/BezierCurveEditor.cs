@@ -2,166 +2,169 @@ using UnityEngine;
 using UnityEditor;
 using System.Collections;
 
-[CustomEditor(typeof(BezierCurve))]
-public class BezierCurveEditor : Editor 
-{	
-	BezierCurve curve;
-	SerializedProperty resolutionProp;
-	SerializedProperty closeProp;
-	SerializedProperty pointsProp;
-	SerializedProperty colorProp;
-	
-	private static bool showPoints = true;
-	
-	void OnEnable() {
-		curve = (BezierCurve)target;
+namespace BezierCurveTools {
+	[CustomEditor(typeof(BezierCurve))]
+	public class BezierCurveEditor : Editor 
+	{	
+		BezierCurve curve;
+		SerializedProperty resolutionProp;
+		SerializedProperty closeProp;
+		SerializedProperty pointsProp;
+		SerializedProperty colorProp;
 		
-		resolutionProp = serializedObject.FindProperty("resolution");
-		closeProp = serializedObject.FindProperty("_close");
-		pointsProp = serializedObject.FindProperty("points");
-		colorProp = serializedObject.FindProperty("drawColor");
-	}
-
-	void OnDisable() {
-		UnityEditor.Tools.hidden = false;
-	}
-	
-	public override void OnInspectorGUI() {
-		UnityEditor.Tools.hidden = true;
-
-		serializedObject.Update();
+		private static bool showPoints = true;
 		
-		EditorGUILayout.PropertyField(resolutionProp);
-		EditorGUILayout.PropertyField(closeProp);
-		EditorGUILayout.PropertyField(colorProp);
-		
-		showPoints = EditorGUILayout.Foldout(showPoints, "Points");
-		
-		if(showPoints)
-		{
-			int pointCount = pointsProp.arraySize;
+		void OnEnable() {
+			curve = (BezierCurve)target;
 			
-			for(int i = 0; i < pointCount; i++) {
-				DrawPointInspector(curve[i], i);
-			}
+			resolutionProp = serializedObject.FindProperty("resolution");
+			closeProp = serializedObject.FindProperty("_close");
+			pointsProp = serializedObject.FindProperty("points");
+			colorProp = serializedObject.FindProperty("drawColor");
+		}
+
+		void OnDisable() {
+			UnityEditor.Tools.hidden = false;
+		}
+		
+		public override void OnInspectorGUI() {
+			UnityEditor.Tools.hidden = true;
+
+			serializedObject.Update();
 			
-			if(GUILayout.Button("Add Point"))
+			EditorGUILayout.PropertyField(resolutionProp);
+			EditorGUILayout.PropertyField(closeProp);
+			EditorGUILayout.PropertyField(colorProp);
+			
+			showPoints = EditorGUILayout.Foldout(showPoints, "Points");
+			
+			if(showPoints)
 			{
-				Undo.SetCurrentGroupName("Add Point");
+				int pointCount = pointsProp.arraySize;
+				
+				for(int i = 0; i < pointCount; i++) {
+					DrawPointInspector(curve[i], i);
+				}
+				
+				if(GUILayout.Button("Add Point"))
+				{
+					Undo.SetCurrentGroupName("Add Point");
 
-				GameObject pointObject = new GameObject("Point "+pointsProp.arraySize);
-				Undo.RegisterCreatedObjectUndo(pointObject, "Add Point GameObject");
+					GameObject pointObject = new GameObject("Point "+pointsProp.arraySize);
+					Undo.RegisterCreatedObjectUndo(pointObject, "Add Point GameObject");
 
-				Undo.RecordObject(pointObject, "Set Point");
-				pointObject.transform.parent = curve.transform;
-				pointObject.transform.localPosition = Vector3.zero;
+					Undo.RecordObject(pointObject, "Set Point");
+					pointObject.transform.parent = curve.transform;
+					pointObject.transform.localPosition = Vector3.zero;
 
-				BezierPoint newPoint = Undo.AddComponent<BezierPoint>(pointObject);
+					BezierPoint newPoint = Undo.AddComponent<BezierPoint>(pointObject);
 
-				newPoint.curve = curve;
-				newPoint.handle1 = Vector3.right*0.1f;
-				newPoint.handle2 = -Vector3.right*0.1f;
+					newPoint.curve = curve;
+					newPoint.handle1 = Vector3.right*0.1f;
+					newPoint.handle2 = -Vector3.right*0.1f;
 
-				Undo.RecordObject(curve, "Update curve");
-				pointsProp.InsertArrayElementAtIndex(pointsProp.arraySize);
-				pointsProp.GetArrayElementAtIndex(pointsProp.arraySize - 1).objectReferenceValue = newPoint;
+					Undo.RecordObject(curve, "Update curve");
+					pointsProp.InsertArrayElementAtIndex(pointsProp.arraySize);
+					pointsProp.GetArrayElementAtIndex(pointsProp.arraySize - 1).objectReferenceValue = newPoint;
 
-				Undo.CollapseUndoOperations(Undo.GetCurrentGroup());
+					Undo.CollapseUndoOperations(Undo.GetCurrentGroup());
+				}
+			}
+			
+			if(GUI.changed)
+			{
+				serializedObject.ApplyModifiedProperties();
+				EditorUtility.SetDirty(target);
 			}
 		}
 		
-		if(GUI.changed)
+		void OnSceneGUI() {
+			for(int i = 0; i < curve.pointCount; i++) {
+				DrawPointSceneGUI(curve[i]);
+			}
+		}
+		
+		void DrawPointInspector(BezierPoint point, int index) {
+			EditorGUILayout.BeginHorizontal();
+
+			if(GUILayout.Button("X", GUILayout.Width(20)))
+			{
+				Undo.SetCurrentGroupName("Remove Point");
+
+				Undo.RecordObject(curve, "Remove Point Reference");
+				pointsProp.MoveArrayElement(curve.GetPointIndex(point), curve.pointCount - 1);
+				pointsProp.arraySize--;
+				Undo.DestroyObjectImmediate(point.gameObject);
+
+				Undo.CollapseUndoOperations( Undo.GetCurrentGroup() );
+
+				return;
+			}
+
+			EditorGUILayout.ObjectField(point.gameObject, typeof(GameObject), true);
+			
+			if(index != 0 && GUILayout.Button(@"/\", GUILayout.Width(25)))
+			{
+				UnityEngine.Object other = pointsProp.GetArrayElementAtIndex(index - 1).objectReferenceValue;
+				pointsProp.GetArrayElementAtIndex(index - 1).objectReferenceValue = point;
+				pointsProp.GetArrayElementAtIndex(index).objectReferenceValue = other;
+			}
+			
+			if(index != pointsProp.arraySize - 1 && GUILayout.Button(@"\/", GUILayout.Width(25)))
+			{
+				UnityEngine.Object other = pointsProp.GetArrayElementAtIndex(index + 1).objectReferenceValue;
+				pointsProp.GetArrayElementAtIndex(index + 1).objectReferenceValue = point;
+				pointsProp.GetArrayElementAtIndex(index).objectReferenceValue = other;
+			}
+			
+			EditorGUILayout.EndHorizontal();
+			
+			EditorGUI.indentLevel++;
+			EditorGUI.indentLevel++;
+
+			BezierPointEditor.DrawInspector(point, drawPositionInspector: true);
+
+			EditorGUI.indentLevel--;
+			EditorGUI.indentLevel--;	
+		}
+		
+		static void DrawPointSceneGUI(BezierPoint point) {
+			BezierPointEditor.DrawSceneGUI(point, selected: false);
+		}
+		
+		public static void DrawOtherPoints(BezierCurve curve, BezierPoint caller) {
+			foreach(BezierPoint p in curve.GetAnchorPoints()) {
+				if(p != caller) DrawPointSceneGUI(p);
+			}
+		}
+		
+		[MenuItem("GameObject/Create Other/Bezier Curve")]
+		public static void CreateCurve(MenuCommand command)
 		{
-			serializedObject.ApplyModifiedProperties();
-			EditorUtility.SetDirty(target);
+			Undo.SetCurrentGroupName("Create Bezier Curve");
+			GameObject curveObject = new GameObject("BezierCurve");
+			Undo.RegisterCreatedObjectUndo(curveObject, "Undo Create Bezier Curve");
+			//Undo.RegisterUndo(curveObject, "Undo Create Curve");
+			BezierCurve curve = curveObject.AddComponent<BezierCurve>();
+			
+			BezierPoint p1 = curve.AddPointAt(Vector3.forward * 0.5f);
+			p1.handleStyle = BezierPoint.HandleStyle.Connected;
+			p1.handle1 = new Vector3(-0.28f, 0, 0);
+			
+			BezierPoint p2 = curve.AddPointAt(Vector3.right * 0.5f);
+			p2.handleStyle = BezierPoint.HandleStyle.Connected;
+			p2.handle1 = new Vector3(0, 0, 0.28f);
+			
+			BezierPoint p3 = curve.AddPointAt(-Vector3.forward * 0.5f);
+			p3.handleStyle = BezierPoint.HandleStyle.Connected;
+			p3.handle1 = new Vector3(0.28f, 0, 0);		
+			
+			BezierPoint p4 = curve.AddPointAt(-Vector3.right * 0.5f);
+			p4.handleStyle = BezierPoint.HandleStyle.Connected;
+			p4.handle1 = new Vector3(0, 0, -0.28f);
+			
+			curve.close = true;
 		}
 	}
-	
-	void OnSceneGUI() {
-		for(int i = 0; i < curve.pointCount; i++) {
-			DrawPointSceneGUI(curve[i]);
-		}
-	}
-	
-	void DrawPointInspector(BezierPoint point, int index) {
-		EditorGUILayout.BeginHorizontal();
 
-		if(GUILayout.Button("X", GUILayout.Width(20)))
-		{
-			Undo.SetCurrentGroupName("Remove Point");
-
-			Undo.RecordObject(curve, "Remove Point Reference");
-			pointsProp.MoveArrayElement(curve.GetPointIndex(point), curve.pointCount - 1);
-			pointsProp.arraySize--;
-			Undo.DestroyObjectImmediate(point.gameObject);
-
-			Undo.CollapseUndoOperations( Undo.GetCurrentGroup() );
-
-			return;
-		}
-
-		EditorGUILayout.ObjectField(point.gameObject, typeof(GameObject), true);
-		
-		if(index != 0 && GUILayout.Button(@"/\", GUILayout.Width(25)))
-		{
-			UnityEngine.Object other = pointsProp.GetArrayElementAtIndex(index - 1).objectReferenceValue;
-			pointsProp.GetArrayElementAtIndex(index - 1).objectReferenceValue = point;
-			pointsProp.GetArrayElementAtIndex(index).objectReferenceValue = other;
-		}
-		
-		if(index != pointsProp.arraySize - 1 && GUILayout.Button(@"\/", GUILayout.Width(25)))
-		{
-			UnityEngine.Object other = pointsProp.GetArrayElementAtIndex(index + 1).objectReferenceValue;
-			pointsProp.GetArrayElementAtIndex(index + 1).objectReferenceValue = point;
-			pointsProp.GetArrayElementAtIndex(index).objectReferenceValue = other;
-		}
-		
-		EditorGUILayout.EndHorizontal();
-		
-		EditorGUI.indentLevel++;
-		EditorGUI.indentLevel++;
-
-		BezierPointEditor.DrawInspector(point, drawPositionInspector: true);
-
-		EditorGUI.indentLevel--;
-		EditorGUI.indentLevel--;	
-	}
-	
-	static void DrawPointSceneGUI(BezierPoint point) {
-		BezierPointEditor.DrawSceneGUI(point, selected: false);
-	}
-	
-	public static void DrawOtherPoints(BezierCurve curve, BezierPoint caller) {
-		foreach(BezierPoint p in curve.GetAnchorPoints()) {
-			if(p != caller) DrawPointSceneGUI(p);
-		}
-	}
-	
-	[MenuItem("GameObject/Create Other/Bezier Curve")]
-	public static void CreateCurve(MenuCommand command)
-	{
-		Undo.SetCurrentGroupName("Create Bezier Curve");
-		GameObject curveObject = new GameObject("BezierCurve");
-		Undo.RegisterCreatedObjectUndo(curveObject, "Undo Create Bezier Curve");
-		//Undo.RegisterUndo(curveObject, "Undo Create Curve");
-		BezierCurve curve = curveObject.AddComponent<BezierCurve>();
-		
-		BezierPoint p1 = curve.AddPointAt(Vector3.forward * 0.5f);
-		p1.handleStyle = BezierPoint.HandleStyle.Connected;
-		p1.handle1 = new Vector3(-0.28f, 0, 0);
-		
-		BezierPoint p2 = curve.AddPointAt(Vector3.right * 0.5f);
-		p2.handleStyle = BezierPoint.HandleStyle.Connected;
-		p2.handle1 = new Vector3(0, 0, 0.28f);
-		
-		BezierPoint p3 = curve.AddPointAt(-Vector3.forward * 0.5f);
-		p3.handleStyle = BezierPoint.HandleStyle.Connected;
-		p3.handle1 = new Vector3(0.28f, 0, 0);		
-		
-		BezierPoint p4 = curve.AddPointAt(-Vector3.right * 0.5f);
-		p4.handleStyle = BezierPoint.HandleStyle.Connected;
-		p4.handle1 = new Vector3(0, 0, -0.28f);
-		
-		curve.close = true;
-	}
 }
