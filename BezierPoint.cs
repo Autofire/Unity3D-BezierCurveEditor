@@ -24,8 +24,7 @@ namespace BezierCurveTools {
 		/// 	- Broken : Each handle moves independently of the other
 		/// 	- None : This point has no handles (both handles are located ON the point)
 		/// </summary>
-		public enum HandleStyle
-		{
+		public enum HandleStyle {
 			Connected,
 			Broken,
 			None,
@@ -63,8 +62,7 @@ namespace BezierCurveTools {
 		/// <value>
 		/// 	- The point's world position
 		/// </value>
-		public Vector3 position
-		{
+		public virtual Vector3 position {
 			get { return transform.position; }
 			set { transform.position = value; }
 		}
@@ -75,8 +73,7 @@ namespace BezierCurveTools {
 		/// <value>
 		/// 	- The point's local position.
 		/// </value>
-		public Vector3 localPosition
-		{
+		public virtual Vector3 localPosition {
 			get { return transform.localPosition; }
 			set { transform.localPosition = value; }
 		}
@@ -88,8 +85,7 @@ namespace BezierCurveTools {
 		/// </summary>
 		[SerializeField] 
 		private Vector3 _handle1;
-		public virtual Vector3 handle1
-		{
+		public virtual Vector3 handle1 {
 			get { return _handle1; }
 			set 
 			{ 
@@ -107,8 +103,7 @@ namespace BezierCurveTools {
 		/// 	- Setting this value will cause the curve to become dirty
 		/// 	- This handle effects the curve generated from this point and the point proceeding it in curve.points
 		/// </summary>
-		public Vector3 globalHandle1
-		{
+		public Vector3 globalHandle1 {
 			get{return transform.TransformPoint(handle1);}
 			set{handle1 = transform.InverseTransformPoint(value);}
 		}
@@ -120,11 +115,9 @@ namespace BezierCurveTools {
 		/// </summary>
 		[SerializeField] 
 		private Vector3 _handle2;
-		public virtual Vector3 handle2
-		{
+		public virtual Vector3 handle2 {
 			get { return _handle2; }
-			set 
-			{ 
+			set {
 				if(_handle2 == value) return;
 				_handle2 = value;
 				if(handleStyle == HandleStyle.None) handleStyle = HandleStyle.Broken;
@@ -139,8 +132,7 @@ namespace BezierCurveTools {
 		///		- Setting this value will cause the curve to become dirty
 		///		- This handle effects the curve generated from this point and the point coming after it in curve.points 
 		/// </summary>
-		public Vector3 globalHandle2
-		{
+		public Vector3 globalHandle2 {
 			get{return 	transform.TransformPoint(handle2);}
 			set{handle2 = transform.InverseTransformPoint(value);}
 		}
@@ -158,10 +150,8 @@ namespace BezierCurveTools {
 		
 		#region MonoBehaviourFunctions
 		
-		void Update()
-		{
-			if(!_curve.dirtyLength && transform.position != lastPosition)
-			{
+		void Update() {
+			if(!_curve.dirtyLength && transform.position != lastPosition) {
 				_curve.SetDirty();
 				lastPosition = transform.position;
 			}

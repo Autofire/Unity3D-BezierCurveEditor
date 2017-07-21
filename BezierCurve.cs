@@ -5,6 +5,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 #endregion
 
 // Original package: Bezier Curve Editor version 1.1
@@ -61,8 +65,7 @@ namespace BezierCurveTools {
 		/// 	- setting this value will cause the curve to become dirty
 		/// </summary>
 		[SerializeField] private bool _close;
-		public bool close
-		{
+		public bool close {
 			get { return _close; }
 			set
 			{
@@ -80,8 +83,7 @@ namespace BezierCurveTools {
 		/// <param name='index'>
 		/// 	- the index
 		/// </param>
-		public BezierPoint this[int index]
-		{
+		public BezierPoint this[int index] {
 			get { return points[index]; }
 		}
 		
@@ -93,8 +95,7 @@ namespace BezierCurveTools {
 		/// <value>
 		/// 	- The point count
 		/// </value>
-		public int pointCount
-		{
+		public int pointCount {
 			get { return points.Count; }
 		}
 		
@@ -137,11 +138,11 @@ namespace BezierCurveTools {
 
 		#region UnityFunctions
 		
-		void OnDrawGizmos () {
+		protected virtual void OnDrawGizmos () {
 			Gizmos.color = drawColor;
 			
-			if(pointCount > 1){
-				for(int i = 0; i < pointCount - 1; i++){
+			if(pointCount > 1) {
+				for(int i = 0; i < pointCount - 1; i++) {
 					DrawCurve(points[i], points[i+1], resolution);
 				}
 				
@@ -149,7 +150,7 @@ namespace BezierCurveTools {
 			}
 		}
 		
-		void Awake() {
+		protected virtual void Awake() {
 			dirtyLength = true;
 		}
 
@@ -162,7 +163,7 @@ namespace BezierCurveTools {
 		#if UNITY_EDITOR
 
 		// TODO Reset does not play nice w/ editor undo
-		void Reset() {
+		protected virtual void Reset() {
 			UnityEditor.Undo.SetCurrentGroupName("Reset GameObject MovementCurve");
 
 			// This step may feel unnecessary, but the order matters here!
@@ -184,7 +185,7 @@ namespace BezierCurveTools {
 			UnityEditor.Undo.CollapseUndoOperations( UnityEditor.Undo.GetCurrentGroup() );
 		}
 
-		void OnValidate() {
+		protected virtual void OnValidate() {
 			UnityEditor.Undo.undoRedoPerformed += CheckPoints;
 
 			CheckPoints();
@@ -233,13 +234,25 @@ namespace BezierCurveTools {
 		/// </param>
 		public BezierPoint AddPointAt(Vector3 position) {
 			GameObject pointObject = new GameObject("Point "+pointCount);
+			#if UNITY_EDITOR
+			Undo.SetCurrentGroupName("Add Point");
+
+			Undo.RecordObject(this, "Update curve");
+			Undo.RegisterCreatedObjectUndo(pointObject, "Add New Point");
+			#endif
 
 			pointObject.transform.parent = transform;
 			pointObject.transform.position = position;
-			
+
 			BezierPoint newPoint = CreatePoint(pointObject);
-			newPoint.curve = this;
-			
+			newPoint.curve = this;	// NOTE: This ALSO will add the point to the curve!
+			newPoint.handle1 = Vector3.right*0.1f;
+			newPoint.handle2 = -Vector3.right*0.1f;
+
+			#if UNITY_EDITOR
+			Undo.CollapseUndoOperations(Undo.GetCurrentGroup());
+			#endif
+
 			return newPoint;
 		}
 		
@@ -249,11 +262,7 @@ namespace BezierCurveTools {
 		/// <param name='point'>
 		/// 	- The point to remove
 		/// </param>
-		public void RemovePoint(BezierPoint point)
-		{
-	//		List<BezierPoint> tempArray = new List<BezierPoint>(points);
-	//		tempArray.Remove(point);
-	//		points = tempArray.ToArray();
+		public void RemovePoint(BezierPoint point) {
 			points.Remove(point);
 			dirtyLength = true;
 		}
@@ -264,8 +273,7 @@ namespace BezierCurveTools {
 		/// <returns>
 		/// 	- The cloned array of points
 		/// </returns>
-		public BezierPoint[] GetAnchorPoints()
-		{
+		public BezierPoint[] GetAnchorPoints() {
 			return (BezierPoint[])points.ToArray();
 		}
 		
@@ -278,8 +286,7 @@ namespace BezierCurveTools {
 		/// <param name='t'>
 		/// 	- Value between 0 and 1 representing the percent along the curve (0 = 0%, 1 = 100%)
 		/// </param>
-		public Vector3 GetPointAt(float t)
-		{
+		public Vector3 GetPointAt(float t) {
 			// This seems to find a position on the curve -- that is, a percentage --
 			// then calls GetPoint, which does the heavy lifting.
 			//  ~AF

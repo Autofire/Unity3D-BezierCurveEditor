@@ -4,7 +4,7 @@ using UnityEditor;
 using System.Collections;
 
 namespace BezierCurveTools {
-	[CustomEditor(typeof(BezierPoint))]
+	[CustomEditor(typeof(BezierPoint), editorForChildClasses: true)]
 	[CanEditMultipleObjects]
 	public class BezierPointEditor : Editor {
 

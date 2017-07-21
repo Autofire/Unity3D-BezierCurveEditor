@@ -3,9 +3,8 @@ using UnityEditor;
 using System.Collections;
 
 namespace BezierCurveTools {
-	[CustomEditor(typeof(BezierCurve))]
-	public class BezierCurveEditor : Editor 
-	{	
+	[CustomEditor(typeof(BezierCurve), editorForChildClasses: true)]
+	public class BezierCurveEditor : Editor {
 		BezierCurve curve;
 		SerializedProperty resolutionProp;
 		SerializedProperty closeProp;
@@ -38,41 +37,19 @@ namespace BezierCurveTools {
 			
 			showPoints = EditorGUILayout.Foldout(showPoints, "Points");
 			
-			if(showPoints)
-			{
+			if(showPoints) {
 				int pointCount = pointsProp.arraySize;
 				
 				for(int i = 0; i < pointCount; i++) {
 					DrawPointInspector(curve[i], i);
 				}
 				
-				if(GUILayout.Button("Add Point"))
-				{
-					Undo.SetCurrentGroupName("Add Point");
-
-					GameObject pointObject = new GameObject("Point "+pointsProp.arraySize);
-					Undo.RegisterCreatedObjectUndo(pointObject, "Add Point GameObject");
-
-					Undo.RecordObject(pointObject, "Set Point");
-					pointObject.transform.parent = curve.transform;
-					pointObject.transform.localPosition = Vector3.zero;
-
-					BezierPoint newPoint = Undo.AddComponent<BezierPoint>(pointObject);
-
-					newPoint.curve = curve;
-					newPoint.handle1 = Vector3.right*0.1f;
-					newPoint.handle2 = -Vector3.right*0.1f;
-
-					Undo.RecordObject(curve, "Update curve");
-					pointsProp.InsertArrayElementAtIndex(pointsProp.arraySize);
-					pointsProp.GetArrayElementAtIndex(pointsProp.arraySize - 1).objectReferenceValue = newPoint;
-
-					Undo.CollapseUndoOperations(Undo.GetCurrentGroup());
+				if(GUILayout.Button("Add Point")) {
+					curve.AddPointAt(curve.transform.position);
 				}
 			}
 			
-			if(GUI.changed)
-			{
+			if(GUI.changed) {
 				serializedObject.ApplyModifiedProperties();
 				EditorUtility.SetDirty(target);
 			}
@@ -87,8 +64,7 @@ namespace BezierCurveTools {
 		void DrawPointInspector(BezierPoint point, int index) {
 			EditorGUILayout.BeginHorizontal();
 
-			if(GUILayout.Button("X", GUILayout.Width(20)))
-			{
+			if(GUILayout.Button("X", GUILayout.Width(20))) {
 				Undo.SetCurrentGroupName("Remove Point");
 
 				Undo.RecordObject(curve, "Remove Point Reference");
@@ -103,15 +79,13 @@ namespace BezierCurveTools {
 
 			EditorGUILayout.ObjectField(point.gameObject, typeof(GameObject), true);
 			
-			if(index != 0 && GUILayout.Button(@"/\", GUILayout.Width(25)))
-			{
+			if(index != 0 && GUILayout.Button(@"/\", GUILayout.Width(25))) {
 				UnityEngine.Object other = pointsProp.GetArrayElementAtIndex(index - 1).objectReferenceValue;
 				pointsProp.GetArrayElementAtIndex(index - 1).objectReferenceValue = point;
 				pointsProp.GetArrayElementAtIndex(index).objectReferenceValue = other;
 			}
 			
-			if(index != pointsProp.arraySize - 1 && GUILayout.Button(@"\/", GUILayout.Width(25)))
-			{
+			if(index != pointsProp.arraySize - 1 && GUILayout.Button(@"\/", GUILayout.Width(25))) {
 				UnityEngine.Object other = pointsProp.GetArrayElementAtIndex(index + 1).objectReferenceValue;
 				pointsProp.GetArrayElementAtIndex(index + 1).objectReferenceValue = point;
 				pointsProp.GetArrayElementAtIndex(index).objectReferenceValue = other;
@@ -139,8 +113,7 @@ namespace BezierCurveTools {
 		}
 		
 		[MenuItem("GameObject/Create Other/Bezier Curve")]
-		public static void CreateCurve(MenuCommand command)
-		{
+		public static void CreateCurve(MenuCommand command) {
 			Undo.SetCurrentGroupName("Create Bezier Curve");
 			GameObject curveObject = new GameObject("BezierCurve");
 			Undo.RegisterCreatedObjectUndo(curveObject, "Undo Create Bezier Curve");
