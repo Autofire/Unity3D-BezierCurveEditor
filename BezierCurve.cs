@@ -290,36 +290,50 @@ namespace BezierCurveTools {
 			// This seems to find a position on the curve -- that is, a percentage --
 			// then calls GetPoint, which does the heavy lifting.
 			//  ~AF
-			if(t <= 0) return points[0].position;
-			else if (t >= 1) return points[pointCount - 1].position;
-			
+			if(t <= 0)
+				return points[0].position;
+			else if (t >= 1)
+				return points[pointCount - 1].position;
+
 			float totalPercent = 0;
 			float curvePercent = 0;
 			
 			BezierPoint p1 = null;
 			BezierPoint p2 = null;
-			
-			for(int i = 0; i < pointCount - 1; i++)
-			{
+
+			for(int i = 0; i < pointCount - 1; i++) {
 				curvePercent = ApproximateLength(points[i], points[i + 1], 10) / length;
-				if(totalPercent + curvePercent > t)
-				{
+				if(totalPercent + curvePercent > t) {
 					p1 = points[i];
 					p2 = points[i + 1];
 					break;
 				}
-				
-				else totalPercent += curvePercent;
+				else
+					totalPercent += curvePercent;
 			}
-			
-			if(close && p1 == null)
-			{
-				p1 = points[pointCount - 1];
-				p2 = points[0];
+
+			if(p1 == null) {
+				// This runs in one of two situations:
+				//  1 - We're set to a closed curve and the position is beyond the last point
+				//  2 - The number is really high, but the calculation *barely* misses the correct
+				//      value, skipping it entirely and causing it to fail to set any point.
+
+				if(close) {
+					p1 = points[pointCount - 1];
+					p2 = points[0];
+				}
+				else {
+					// HACK: This code should really be unnecessary. However, I don't
+					//       understand the code well enough to come up with a good fix.	
+					p1 = points[pointCount - 2];
+					p2 = points[pointCount - 1];
+
+					totalPercent -= curvePercent;	// Subtract out change above to get the correct position
+				}
 			}
-			
+
 			t -= totalPercent;
-			
+
 			return GetPoint(p1, p2, t / curvePercent);
 		}
 		
@@ -403,18 +417,21 @@ namespace BezierCurveTools {
 		/// <param name='t'>
 		/// 	- Value between 0 and 1 representing the percent along the curve (0 = 0%, 1 = 100%)
 		/// </param>
-		public static Vector3 GetPoint(BezierPoint p1, BezierPoint p2, float t)
-		{
-			if(p1.handle2 != Vector3.zero)
-			{
-				if(p2.handle1 != Vector3.zero) return GetCubicCurvePoint(p1.position, p1.globalHandle2, p2.globalHandle1, p2.position, t);
-				else return GetQuadraticCurvePoint(p1.position, p1.globalHandle2, p2.position, t);
+		public static Vector3 GetPoint(BezierPoint p1, BezierPoint p2, float t) {
+			UnityEngine.Assertions.Assert.IsNotNull(p1, "Point 1 is null!");
+			UnityEngine.Assertions.Assert.IsNotNull(p2, "Point 2 is null!");
+
+			if(p1.handle2 != Vector3.zero) {
+				if(p2.handle1 != Vector3.zero)
+					return GetCubicCurvePoint(p1.position, p1.globalHandle2, p2.globalHandle1, p2.position, t);
+				else
+					return GetQuadraticCurvePoint(p1.position, p1.globalHandle2, p2.position, t);
 			}
-			
-			else
-			{
-				if(p2.handle1 != Vector3.zero) return GetQuadraticCurvePoint(p1.position, p2.globalHandle1, p2.position, t);
-				else return GetLinearPoint(p1.position, p2.position, t);
+			else {
+				if(p2.handle1 != Vector3.zero)
+					return GetQuadraticCurvePoint(p1.position, p2.globalHandle1, p2.position, t);
+				else
+					return GetLinearPoint(p1.position, p2.position, t);
 			}	
 		}
 
