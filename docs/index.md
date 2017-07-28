@@ -1,11 +1,3 @@
----
-layout: docs
-title: Index
-description: Test
-group: test
-toc: true
----
-
 Welcome to the Unity3D-BezierCurveEditor docs!
 
 This is a component for BezierCurves in Unity space. Note that this is tool for programmers to use to make custom editors, and it does nothing out of the box.
