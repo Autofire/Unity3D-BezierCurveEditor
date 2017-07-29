@@ -24,11 +24,6 @@ namespace BezierCurveTools {
 	[ExecuteInEditMode]
 	[Serializable]
 	public class BezierCurve : MonoBehaviour {
-
-		// This should not get attached directly to the objec that is moving; we'll
-		// wanna make sure that this is placed on a prefab, and that prefab gets spawned.
-		// Then the spawned object will move itself to [0,0,0], as all operations aught to
-		// to be taken from the origin.
 		
 		#region PublicVariables
 		
@@ -112,7 +107,8 @@ namespace BezierCurveTools {
 						_length += ApproximateLength(points[i], points[i + 1], resolution);
 					}
 					
-					if(close) _length += ApproximateLength(points[pointCount - 1], points[0], resolution);
+					if(close)
+						_length += ApproximateLength(points[pointCount - 1], points[0], resolution);
 					
 					dirtyLength = false;
 				}
@@ -146,7 +142,8 @@ namespace BezierCurveTools {
 					DrawCurve(points[i], points[i+1], resolution);
 				}
 				
-				if (close) DrawCurve(points[pointCount - 1], points[0], resolution);
+				if(close)
+					DrawCurve(points[pointCount - 1], points[0], resolution);
 			}
 		}
 		
