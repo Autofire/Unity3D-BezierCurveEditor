@@ -191,17 +191,29 @@ namespace BezierCurveTools {
 		// This is to get called whenever it's possible that a point may get externally
 		// modified; it ensures that we have no null references floating around.
 		void CheckPoints() {
-
-			// Note that order matters here! If we prune null points first, then we'll
-			// potentially put them right back, leading to a null reference exception.
-			foreach(BezierPoint point in GetComponentsInChildren<BezierPoint>()) {
-				if(!points.Contains(point)) {
-					points.Add(point);
+			// Note that we should check for this; this callback may get run if we
+			// are no longer in the scene.
+			if(gameObject != null) {
+				// Note that order matters here! If we prune null points first, then we'll
+				// potentially put them right back, leading to a null reference exception.
+				foreach(BezierPoint point in GetComponentsInChildren<BezierPoint>()) {
+					if(!points.Contains(point)) {
+						points.Add(point);
+					}
 				}
-			}
 
-			points.RemoveAll((BezierPoint point) => { return point == null; });
+				points.RemoveAll((BezierPoint point) => { return point == null; });
+			}
+			else {
+				UnityEditor.Undo.undoRedoPerformed -= CheckPoints;
+			}
 		}
+
+		void OnDestroy() {
+			UnityEditor.Undo.undoRedoPerformed -= CheckPoints;
+		}
+
+
 
 		#endif
 		#endregion
